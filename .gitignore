@@ -17,3 +17,6 @@ dist/
 *.egg-info
 .DS_Store
 .env.local
+message_for_user.md
+mcp_db
+staticfiles/
