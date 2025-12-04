@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MCP Chat</title>
+  <link rel="stylesheet" href="/static/chatapp/chat.css">
+</head>
+<body>
+  <div class="container">
+    <h1>MCP Chat</h1>
+    <div class="left">
+      <form id="uploadForm" action="/upload/" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label>Title: <input type="text" name="title"></label><br>
+        <label>File: <input type="file" name="file" required></label><br>
+        <button type="submit">Upload Document</button>
+      </form>
+
+      <h3>Documents</h3>
+      <div id="docs">
+        {% for d in docs %}
+          <div class="doc">
+            <input type="checkbox" class="doc-checkbox" value="{{ d.id }}" id="doc-{{ d.id }}">
+            <label for="doc-{{ d.id }}">{{ d.title }} ({{ d.uploaded_at|date:"Y-m-d H:i" }})</label>
+          </div>
+        {% empty %}
+          <div>No documents yet</div>
+        {% endfor %}
+      </div>
+      <button id="reloadDocs">Reload documents</button>
+    </div>
+
+    <div class="right">
+      <div id="chatWindow"></div>
+      <form id="chatForm">
+        <input id="messageInput" placeholder="Ask something..." autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+
+<script>
+async function reloadDocs() {
+  // reload by reloading the page for simplicity, or hit an endpoint for JSON
+  location.reload();
+}
+
+document.getElementById("reloadDocs").addEventListener("click", reloadDocs);
+
+const chatForm = document.getElementById("chatForm");
+const chatWindow = document.getElementById("chatWindow");
+
+function appendMessage(role, text) {
+  const el = document.createElement("div");
+  el.className = "message " + role;
+  el.textContent = (role === "user" ? "You: " : "Agent: ") + text;
+  chatWindow.appendChild(el);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+chatForm.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const input = document.getElementById("messageInput");
+  const message = input.value.trim();
+  if (!message) return;
+  appendMessage("user", message);
+  input.value = "";
+
+  // gather selected docs
+  const checkboxes = [...document.querySelectorAll(".doc-checkbox:checked")];
+  const ids = checkboxes.map(cb => parseInt(cb.value));
+
+  const payload = { message: message, include_doc_ids: ids };
+
+  appendMessage("system", "…sending to agent");
+
+  try {
+    const res = await fetch("/chat/send/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const j = await res.json();
+    // the exact shape will depend on your agent. we try to show a sensible string.
+    let out = "";
+    if (j.agent_response) {
+      // if agent returns { text: "..." } or { answer: "..."} try common fields
+      const ar = j.agent_response;
+      if (typeof ar === "string") out = ar;
+      else if (ar.answer) out = ar.answer;
+      else if (ar.text) out = ar.text;
+      else out = JSON.stringify(ar);
+    } else if (j.error) {
+      out = "Error: " + j.error;
+    } else {
+      out = JSON.stringify(j);
+    }
+    appendMessage("agent", out);
+  } catch (e) {
+    appendMessage("agent", "Request failed: " + e.toString());
+  }
+});
+</script>
+</body>
+</html>

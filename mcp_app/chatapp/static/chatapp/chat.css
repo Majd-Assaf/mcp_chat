@@ -1,0 +1,10 @@
+body { font-family: Arial, sans-serif; margin: 20px; }
+.container { display:flex; gap:20px; }
+.left { width:280px; border-right:1px solid #ddd; padding-right:10px; }
+.right { flex:1; display:flex; flex-direction:column; }
+#chatWindow { height: 420px; border:1px solid #ddd; padding:10px; overflow:auto; background:#fafafa; }
+.message.user { color: #222; margin:6px 0; }
+.message.agent { color: #0b5; margin:6px 0; }
+.message.system { color:#888; margin:6px 0; }
+#chatForm { display:flex; gap:8px; margin-top:8px; }
+#messageInput { flex:1; padding:8px; }
